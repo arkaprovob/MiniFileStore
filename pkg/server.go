@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"mime/multipart"
 	"net/http"
 	"os"
 )
@@ -51,12 +50,7 @@ func storeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error retrieving the file", http.StatusInternalServerError)
 		return
 	}
-	defer func(file multipart.File) {
-		err := file.Close()
-		if err != nil {
-			log.Println("Error closing the file:", err)
-		}
-	}(file)
+	defer CloseMultipartFile(file)
 
 	// Create a new file in the files directory
 	// todo get teh filepath from the environment variable `os.Getenv("FILES_DIR")`
@@ -66,12 +60,7 @@ func storeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error creating the file", http.StatusInternalServerError)
 		return
 	}
-	defer func(dst *os.File) {
-		err := dst.Close()
-		if err != nil {
-			log.Println("Error closing the file:", err)
-		}
-	}(dst)
+	defer CloseFile(dst)
 
 	// Write the contents of the uploaded file to the new file
 	_, err = io.Copy(dst, file)

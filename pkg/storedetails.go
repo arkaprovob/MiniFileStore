@@ -3,7 +3,6 @@ package pkg
 import (
 	"encoding/csv"
 	"io"
-	"log"
 	"os"
 	"strconv"
 )
@@ -22,12 +21,7 @@ func storeInCSV(details FileDetails) error {
 	if err != nil {
 		return err
 	}
-	defer func(file *os.File) {
-		err := file.Close()
-		if err != nil {
-			log.Printf("Error closing file: %v", err)
-		}
-	}(file)
+	defer CloseFile(file)
 
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
@@ -46,23 +40,13 @@ func deleteFromCSV(fileName string) error {
 	if err != nil {
 		return err
 	}
-	defer func(file *os.File) {
-		err := file.Close()
-		if err != nil {
-			log.Printf("Error closing file: %v", err)
-		}
-	}(file)
+	defer CloseFile(file)
 
 	temp, err := os.Create(TempCsvFileLocation)
 	if err != nil {
 		return err
 	}
-	defer func(temp *os.File) {
-		err := temp.Close()
-		if err != nil {
-			log.Printf("Error closing file: %v", err)
-		}
-	}(temp)
+	defer CloseFile(temp)
 
 	reader := csv.NewReader(file)
 	writer := csv.NewWriter(temp)
@@ -103,12 +87,7 @@ func getAllEntries() ([]FileDetails, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func(file *os.File) {
-		err := file.Close()
-		if err != nil {
-			log.Printf("Error closing file: %v", err)
-		}
-	}(file)
+	defer CloseFile(file)
 
 	reader := csv.NewReader(file)
 	var entries []FileDetails
@@ -141,23 +120,13 @@ func updateInCSV(fileName string, newDetails FileDetails) error {
 	if err != nil {
 		return err
 	}
-	defer func(file *os.File) {
-		err := file.Close()
-		if err != nil {
-			log.Printf("Error closing file: %v", err)
-		}
-	}(file)
+	defer CloseFile(file)
 
 	temp, err := os.Create(TempCsvFileLocation)
 	if err != nil {
 		return err
 	}
-	defer func(temp *os.File) {
-		err := temp.Close()
-		if err != nil {
-			log.Printf("Error closing file: %v", err)
-		}
-	}(temp)
+	defer CloseFile(temp)
 
 	reader := csv.NewReader(file)
 	writer := csv.NewWriter(temp)
@@ -201,12 +170,7 @@ func cleanCSV() error {
 	if err != nil {
 		return err
 	}
-	defer func(file *os.File) {
-		err := file.Close()
-		if err != nil {
-			log.Printf("Error closing file: %v", err)
-		}
-	}(file)
+	defer CloseFile(file)
 
 	return nil
 }
