@@ -165,6 +165,23 @@ func updateInCSV(fileName string, newDetails FileDetails) error {
 
 	return nil
 }
+
+// TODO: Improve the findByHash function by implementing a hashmap for O(1) lookup time.
+func findByHash(hash string) (*FileDetails, error) {
+	entries, err := getAllEntries()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, entry := range entries {
+		if entry.FileHash == hash {
+			return &entry, nil
+		}
+	}
+
+	return nil, nil
+}
+
 func cleanCSV() error {
 	file, err := os.Create(CsvFileLocation)
 	if err != nil {

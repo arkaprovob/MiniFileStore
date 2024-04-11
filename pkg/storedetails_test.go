@@ -61,6 +61,18 @@ func TestUpdateInCSV(t *testing.T) {
 		t.Errorf("updateInCSV failed with error: %v", err)
 	}
 }
+
+func TestFindByHash(t *testing.T) {
+	fileHash := "abcd1234"
+	entry, err := findByHash(fileHash)
+	if err != nil {
+		t.Errorf("findByHash failed with error: %v", err)
+	}
+	if entry == nil {
+		t.Errorf("findByHash failed to find the entry")
+	}
+}
+
 func TestCleanCSV(t *testing.T) {
 	err := cleanCSV()
 	if err != nil {
