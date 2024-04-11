@@ -73,6 +73,17 @@ func TestFindByHash(t *testing.T) {
 	}
 }
 
+func TestFindByName(t *testing.T) {
+	fileName := "testfile2.txt"
+	entry, err := findByName(fileName)
+	if err != nil {
+		t.Errorf("fileName failed with error: %v", err)
+	}
+	if entry == nil {
+		t.Errorf("fileName failed to find the entry")
+	}
+}
+
 func TestCleanCSV(t *testing.T) {
 	err := cleanCSV()
 	if err != nil {

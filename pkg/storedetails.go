@@ -3,6 +3,7 @@ package pkg
 import (
 	"encoding/csv"
 	"io"
+	"log"
 	"os"
 	"strconv"
 )
@@ -19,6 +20,7 @@ type FileDetails struct {
 func storeInCSV(details FileDetails) error {
 	file, err := os.OpenFile(CsvFileLocation, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
+		log.Println("Error opening the file:", err)
 		return err
 	}
 	defer CloseFile(file)
@@ -29,6 +31,7 @@ func storeInCSV(details FileDetails) error {
 	record := []string{details.Filename, strconv.FormatInt(details.FileSize, 10), details.FileHash}
 	err = writer.Write(record)
 	if err != nil {
+		log.Println("Error writing record to the file:", err)
 		return err
 	}
 
@@ -38,12 +41,14 @@ func storeInCSV(details FileDetails) error {
 func deleteFromCSV(fileName string) error {
 	file, err := os.Open(CsvFileLocation)
 	if err != nil {
+		log.Println("Error opening the file:", err)
 		return err
 	}
 	defer CloseFile(file)
 
 	temp, err := os.Create(TempCsvFileLocation)
 	if err != nil {
+		log.Println("Error creating the file:", err)
 		return err
 	}
 	defer CloseFile(temp)
@@ -58,12 +63,14 @@ func deleteFromCSV(fileName string) error {
 			break
 		}
 		if err != nil {
+			log.Println("Error reading the file:", err)
 			return err
 		}
 
 		if record[0] != fileName {
 			err = writer.Write(record)
 			if err != nil {
+				log.Println("Error writing record to the file:", err)
 				return err
 			}
 		}
@@ -71,11 +78,13 @@ func deleteFromCSV(fileName string) error {
 
 	err = os.Remove(CsvFileLocation)
 	if err != nil {
+		log.Println("Error removing the file:", err)
 		return err
 	}
 
 	err = os.Rename(TempCsvFileLocation, CsvFileLocation)
 	if err != nil {
+		log.Println("Error renaming the file:", err)
 		return err
 	}
 
@@ -85,6 +94,7 @@ func deleteFromCSV(fileName string) error {
 func getAllEntries() ([]FileDetails, error) {
 	file, err := os.Open(CsvFileLocation)
 	if err != nil {
+		log.Println("Error opening the file:", err)
 		return nil, err
 	}
 	defer CloseFile(file)
@@ -98,11 +108,13 @@ func getAllEntries() ([]FileDetails, error) {
 			break
 		}
 		if err != nil {
+			log.Println("Error reading the file:", err)
 			return nil, err
 		}
 
 		fileSize, err := strconv.ParseInt(record[1], 10, 64)
 		if err != nil {
+			log.Println("Error parsing the file size:", err)
 			return nil, err
 		}
 
@@ -118,12 +130,14 @@ func getAllEntries() ([]FileDetails, error) {
 func updateInCSV(fileName string, newDetails FileDetails) error {
 	file, err := os.Open(CsvFileLocation)
 	if err != nil {
+		log.Println("Error opening the file:", err)
 		return err
 	}
 	defer CloseFile(file)
 
 	temp, err := os.Create(TempCsvFileLocation)
 	if err != nil {
+		log.Println("Error creating the file:", err)
 		return err
 	}
 	defer CloseFile(temp)
@@ -138,6 +152,7 @@ func updateInCSV(fileName string, newDetails FileDetails) error {
 			break
 		}
 		if err != nil {
+			log.Println("Error reading the file:", err)
 			return err
 		}
 
@@ -149,17 +164,20 @@ func updateInCSV(fileName string, newDetails FileDetails) error {
 
 		err = writer.Write(record)
 		if err != nil {
+			log.Println("Error writing to the file:", err)
 			return err
 		}
 	}
 
 	err = os.Remove(CsvFileLocation)
 	if err != nil {
+		log.Println("Error removing the file:", err)
 		return err
 	}
 
 	err = os.Rename(TempCsvFileLocation, CsvFileLocation)
 	if err != nil {
+		log.Println("Error renaming the file:", err)
 		return err
 	}
 
@@ -170,6 +188,7 @@ func updateInCSV(fileName string, newDetails FileDetails) error {
 func findByHash(hash string) (*FileDetails, error) {
 	entries, err := getAllEntries()
 	if err != nil {
+		log.Println("Error getting all entries:", err)
 		return nil, err
 	}
 
@@ -182,9 +201,27 @@ func findByHash(hash string) (*FileDetails, error) {
 	return nil, nil
 }
 
+// TODO: Improve the findByName function by implementing a hashmap for O(1) lookup time.
+func findByName(name string) (*FileDetails, error) {
+	entries, err := getAllEntries()
+	if err != nil {
+		log.Println("Error getting all entries:", err)
+		return nil, err
+	}
+
+	for _, entry := range entries {
+		if entry.Filename == name {
+			return &entry, nil
+		}
+	}
+
+	return nil, nil
+}
+
 func cleanCSV() error {
 	file, err := os.Create(CsvFileLocation)
 	if err != nil {
+		log.Println("Error creating the file:", err)
 		return err
 	}
 	defer CloseFile(file)

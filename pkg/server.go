@@ -43,18 +43,30 @@ func storeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fileName := r.FormValue("filename")
+	err = validateRequiredField("filename", fileName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	// Get the file from the form
+	// todo use the fileHeader for accurate file size information `fileHeader.Size`
 	file, _, err := r.FormFile("file") // retrieve the file from form data
 	if err != nil {
 		log.Println("Error retrieving the file:", err)
 		http.Error(w, "Error retrieving the file", http.StatusInternalServerError)
 		return
 	}
+	if file == nil {
+		log.Println("No file was uploaded")
+		http.Error(w, "No file was uploaded", http.StatusBadRequest)
+		return
+	}
 	defer CloseMultipartFile(file)
 
 	// Create a new file in the files directory
-	// todo get teh filepath from the environment variable `os.Getenv("FILES_DIR")`
-	dst, err := os.Create("files/" + r.FormValue("filename")) // create a new file with the same name
+	dst, err := os.Create(getFilePath(fileName)) // create a new file with the same name
 	if err != nil {
 		log.Println("Error creating the file:", err)
 		http.Error(w, "Error creating the file", http.StatusInternalServerError)
@@ -71,7 +83,8 @@ func storeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Compute the MD5 hash of the uploaded file
-	md5Hash, err := ComputeMD5Hash("files/" + r.FormValue("filename"))
+	// todo use filepath.Join function to generate the file-path
+	md5Hash, err := ComputeMD5Hash(getFilePath(fileName))
 	if err != nil {
 		log.Println("Error computing the MD5 hash:", err)
 		http.Error(w, "Error computing the MD5 hash", http.StatusInternalServerError)
@@ -91,13 +104,13 @@ func storeHandler(w http.ResponseWriter, r *http.Request) {
 
 	if entry != nil {
 		log.Println("File already exists")
-		// call the update handler
 		http.Error(w, "File already exists", http.StatusConflict)
 		return
 	}
 
 	// store the file details in the csv file
-	fileDetails := FileDetails{Filename: r.FormValue("filename"), FileSize: r.ContentLength, FileHash: md5Hash}
+	// todo
+	fileDetails := FileDetails{Filename: fileName, FileSize: r.ContentLength, FileHash: md5Hash}
 	err = storeInCSV(fileDetails)
 	if err != nil {
 		log.Println("Error storing file details:", err)
@@ -105,7 +118,6 @@ func storeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Write a success message to the response
 	_, err = w.Write([]byte("File uploaded successfully"))
 	if err != nil {
 		log.Println("Error writing response:", err)
@@ -129,6 +141,8 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	newFileName := r.FormValue("filename")
+
 	// Get the duplicate flag from the form
 	duplicate := r.FormValue("duplicate") == "false"
 
@@ -141,7 +155,67 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer CloseMultipartFile(file)
 
-	// Implement file updating logic here using prevFilename, duplicate, and file
+	record, err := findByName(prevFilename)
+	// todo use the helper-function to reduce the code duplication of error handling
+	if err != nil {
+		log.Println("Error finding file name:", err)
+		http.Error(w, "Error finding file name", http.StatusInternalServerError)
+		return
+	}
+	if record == nil {
+		log.Println("File does not exist")
+		http.Error(w, "The requested file could not be found. Please verify the file name and try again.",
+			http.StatusNotFound)
+		return
+	}
+
+	if file == nil {
+		// If no new file is provided, either update the existing record entry or create
+		// a duplicate of the existing file with new record.
+		err := ManageFileUpdate(duplicate, prevFilename, *record)
+		if err != nil {
+			http.Error(w, "Error updating the file", http.StatusInternalServerError)
+			return
+		}
+	} else {
+		// If a new file is provided, validate the new file name
+		err := validateRequiredField("filename", newFileName)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		// Create a new file in the files directory
+		dst, err := os.Create(getFilePath(newFileName))
+		if err != nil {
+			log.Println("Error creating the file:", err)
+			http.Error(w, "Error creating the file", http.StatusInternalServerError)
+			return
+		}
+		defer CloseFile(dst)
+
+		// Write the contents of the uploaded file to the new file
+		_, err = io.Copy(dst, file)
+		if err != nil {
+			log.Println("Error copying the file:", err)
+			http.Error(w, "Error writing to the file", http.StatusInternalServerError)
+			return
+		}
+		// Compute the MD5 hash of the new file
+		md5Hash, err := ComputeMD5Hash(getFilePath(newFileName))
+		newRecord := FileDetails{Filename: newFileName, FileSize: r.ContentLength, FileHash: md5Hash}
+		// Update the old record with the new record and delete the old file
+		err = modifyRecordAndFile(*record, newRecord)
+		if err != nil {
+			http.Error(w, "Error updating the old record and deleting the old file: "+err.Error(),
+				http.StatusInternalServerError)
+			return
+		}
+	}
+	_, err = w.Write([]byte("successfully updated the file"))
+	if err != nil {
+		log.Println("Error writing success response:", err)
+	}
 }
 
 func deleteHandler(w http.ResponseWriter, r *http.Request) {
