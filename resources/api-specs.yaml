@@ -1,0 +1,87 @@
+openapi: 3.0.0
+info:
+  title: Your API Title
+  description: Description of your API
+  version: 1.0.0
+servers:
+  - url: http://localhost:{port}
+    variables:
+      port:
+        default: "8080"
+paths:
+  /api/v1/store:
+    post:
+      summary: Store a file
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                filename:
+                  type: string
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: File uploaded successfully
+  /api/v1/update:
+    post:
+      summary: Update a file
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                prevFilename:
+                  type: string
+                filename:
+                  type: string
+                duplicate:
+                  type: boolean
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: File updated successfully
+  /api/v1/exists:
+    get:
+      summary: Check if a file exists
+      parameters:
+        - name: hash
+          in: query
+          schema:
+            type: string
+        - name: name
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: File exists
+  /api/v1/list:
+    get:
+      summary: List all files
+      responses:
+        '200':
+          description: List of all files
+  /api/v1/delete:
+    post:
+      summary: Delete a file
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                filename:
+                  type: string
+      responses:
+        '200':
+          description: File deleted successfully

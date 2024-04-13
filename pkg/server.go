@@ -18,6 +18,7 @@ func Serve(port string) {
 	http.HandleFunc("/api/v1/exists", existenceCheckHandler)
 	http.HandleFunc("/api/v1/list", listHandler)
 	http.HandleFunc("/api/v1/delete", deleteHandler)
+	http.HandleFunc("/api/v1/frequency", wordFrequencyHandler)
 	// Add more handlers for other operations
 
 	log.Println(fmt.Sprintf("Server is starting on port %s...", port))
@@ -348,6 +349,52 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Respond with a success message
 	_, err = w.Write([]byte("File deleted successfully"))
+	if err != nil {
+		log.Println("Error writing response:", err)
+	}
+}
+func wordFrequencyHandler(w http.ResponseWriter, r *http.Request) {
+	// Parse the form data to get the parameters
+	err := r.ParseForm()
+	if err != nil {
+		log.Println("Error parsing the form:", err)
+		http.Error(w, "Error parsing the form", http.StatusInternalServerError)
+		return
+	}
+
+	// Get the noOfWords parameter from the form and convert it to an integer
+	noOfWords, err := strconv.Atoi(r.FormValue("noOfWords"))
+	if err != nil {
+		log.Println("Error parsing noOfWords:", err)
+		http.Error(w, "Invalid noOfWords value", http.StatusBadRequest)
+		return
+	}
+
+	// Get the mostFrequent parameter from the form and convert it to a boolean
+	mostFrequent, err := strconv.ParseBool(r.FormValue("mostFrequent"))
+	if err != nil {
+		log.Println("Error parsing mostFrequent:", err)
+		http.Error(w, "Invalid mostFrequent value", http.StatusBadRequest)
+		return
+	}
+
+	// Call the CountWordsFrequencyParallel function with the directory set as "test-resources"
+	// todo get teh directory from the environment variable `os.Getenv("FILES_DIR")`
+	result := CountWordsFrequencyParallel("test-resources", noOfWords, mostFrequent)
+
+	// Convert the result to JSON and write it to the response
+	resultJson, err := json.Marshal(result)
+	if err != nil {
+		log.Println("Error marshalling the result:", err)
+		http.Error(w, "Error marshalling the result", http.StatusInternalServerError)
+		return
+	}
+
+	// Set the content type to application/json
+	w.Header().Set("Content-Type", "application/json")
+
+	// Write the JSON result to the response
+	_, err = w.Write(resultJson)
 	if err != nil {
 		log.Println("Error writing response:", err)
 	}

@@ -481,3 +481,45 @@ func TestDeleteHandler(t *testing.T) {
 			rr.Body.String(), expected)
 	}
 }
+func TestWordFrequencyHandler(t *testing.T) {
+	// Create a new HTTP request with the form data
+	form := url.Values{}
+	form.Add("noOfWords", "10")
+	form.Add("mostFrequent", "true")
+	req, err := http.NewRequest("POST", "/api/v1/frequency", strings.NewReader(form.Encode()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	// Create a new HTTP response recorder
+	rr := httptest.NewRecorder()
+
+	// Call the wordFrequencyHandler function
+	wordFrequencyHandler(rr, req)
+
+	// Check the HTTP response code
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	// Unmarshal the response body into a slice of WordCount
+	var result Frequencies
+	err = json.Unmarshal(rr.Body.Bytes(), &result)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check the length of the result slice is 10
+	if len(result) != 10 {
+		t.Errorf("Expected 10 results, got %d", len(result))
+	}
+
+	// Check the count for each word is greater than 0
+	for _, frequencyCount := range result {
+		if frequencyCount.Count <= 0 {
+			t.Errorf("Expected count to be greater than 0 for word %s, got %d",
+				frequencyCount.Word, frequencyCount.Count)
+		}
+	}
+}
