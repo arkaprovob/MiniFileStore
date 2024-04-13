@@ -84,6 +84,42 @@ func TestFindByName(t *testing.T) {
 	}
 }
 
+func TestFindByHashOrNameWithCorrectHash(t *testing.T) {
+	fileName := "invalid.txt"
+	fileHash := "efgh5678"
+	entry, err := findByHashOrName(fileHash, fileName)
+	if err != nil {
+		t.Errorf("fileName failed with error: %v", err)
+	}
+	if entry == nil {
+		t.Errorf("fileHash failed to find the entry")
+	}
+}
+
+func TestFindByHashOrNameWithCorrectName(t *testing.T) {
+	fileName := "testfile2.txt"
+	fileHash := "xxxx"
+	entry, err := findByHashOrName(fileHash, fileName)
+	if err != nil {
+		t.Errorf("fileName failed with error: %v", err)
+	}
+	if entry == nil {
+		t.Errorf("fileName failed to find the entry")
+	}
+}
+
+func TestFindByHashOrNameWithInvalidDetails(t *testing.T) {
+	fileName := "invalid.txt"
+	fileHash := "xxxx"
+	entry, err := findByHashOrName(fileHash, fileName)
+	if err != nil {
+		t.Errorf("findByHashOrName failed with error: %v", err)
+	}
+	if entry != nil {
+		t.Errorf("Entry should be empty as per test conditions")
+	}
+}
+
 func TestCleanCSV(t *testing.T) {
 	err := cleanCSV()
 	if err != nil {

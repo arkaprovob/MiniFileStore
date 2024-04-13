@@ -1,18 +1,23 @@
 package pkg
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 )
 
 func Serve(port string) {
 	http.HandleFunc("/", rootHandler)
-	http.HandleFunc("/store", storeHandler)
-	http.HandleFunc("/update", updateHandler)
-	http.HandleFunc("/delete", deleteHandler)
+	http.HandleFunc("/api/v1/store", storeHandler)
+	http.HandleFunc("/api/v1/update", updateHandler)
+	http.HandleFunc("/api/v1/exists", existenceCheckHandler)
+	http.HandleFunc("/api/v1/list", listHandler)
+	http.HandleFunc("/api/v1/delete", deleteHandler)
 	// Add more handlers for other operations
 
 	log.Println(fmt.Sprintf("Server is starting on port %s...", port))
@@ -144,16 +149,23 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 	newFileName := r.FormValue("filename")
 
 	// Get the duplicate flag from the form
-	duplicate := r.FormValue("duplicate") == "false"
+	duplicate, err := strconv.ParseBool(r.FormValue("duplicate"))
+	if err != nil {
+		log.Println("Error parsing duplicate value:", err)
+		http.Error(w, "Invalid duplicate value", http.StatusBadRequest)
+		return
+	}
 
 	// Get the new file from the form
 	file, _, err := r.FormFile("file") // retrieve the file from form data
-	if err != nil && duplicate {
+	if err != nil && !errors.Is(err, http.ErrMissingFile) {
 		log.Println("Error retrieving the file:", err)
 		http.Error(w, "Error retrieving the file", http.StatusInternalServerError)
 		return
 	}
-	defer CloseMultipartFile(file)
+	if file != nil {
+		defer CloseMultipartFile(file)
+	}
 
 	record, err := findByName(prevFilename)
 	// todo use the helper-function to reduce the code duplication of error handling
@@ -164,7 +176,7 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if record == nil {
 		log.Println("File does not exist")
-		http.Error(w, "The requested file could not be found. Please verify the file name and try again.",
+		http.Error(w, "Record does not exists",
 			http.StatusNotFound)
 		return
 	}
@@ -172,7 +184,8 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 	if file == nil {
 		// If no new file is provided, either update the existing record entry or create
 		// a duplicate of the existing file with new record.
-		err := ManageFileUpdate(duplicate, prevFilename, *record)
+		// todo case to handle when duplicate is true and file name is also changed but content is not changed
+		err := ManageFileUpdate(duplicate, newFileName, *record)
 		if err != nil {
 			http.Error(w, "Error updating the file", http.StatusInternalServerError)
 			return
@@ -218,6 +231,124 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func existenceCheckHandler(w http.ResponseWriter, r *http.Request) {
+
+	// Parse the form data to get the hash value
+	err := r.ParseForm()
+	if err != nil {
+		log.Println("Error parsing the form:", err)
+		http.Error(w, "Error parsing the form", http.StatusInternalServerError)
+		return
+	}
+
+	hash := r.FormValue("hash")
+	name := r.FormValue("name")
+
+	// Create a closure that checks if either the hash or the name is provided
+	if func(hash string, name string) error {
+		if hash == "" && name == "" {
+			return errors.New("either hash or name is required")
+		}
+		return nil
+	}(hash, name) != nil {
+		http.Error(w, "either hash or name is required", http.StatusBadRequest)
+		return
+	}
+
+	// Use the findByHash function to check if a file with the given hash exists
+	record, err := findByHashOrName(hash, name)
+	if err != nil {
+		log.Println("Error executing findByHashOrName:", err)
+		http.Error(w, "Error in finding record by hash or name", http.StatusInternalServerError)
+		return
+	}
+
+	// If the file does not exist, respond with an appropriate message
+	if record == nil {
+		http.Error(w, "record does not exist", http.StatusNotFound)
+		return // return here to prevent further execution
+	}
+
+	// Marshal the record into JSON
+	recordJson, err := json.Marshal(record)
+	if err != nil {
+		log.Println("Error marshalling the record:", err)
+		http.Error(w, "Error marshalling the record", http.StatusInternalServerError)
+		return
+	}
+	// Set the content type to application/json
+	w.Header().Set("Content-Type", "application/json")
+
+	// Write the JSON record to the response
+	_, err = w.Write(recordJson)
+	if err != nil {
+		log.Println("Error writing response:", err)
+	}
+}
+
+func listHandler(writer http.ResponseWriter, r *http.Request) {
+
+	entries, err := getAllEntries()
+	if err != nil {
+		log.Println("Error getting all entries:", err)
+		http.Error(writer, "Error getting all entries", http.StatusInternalServerError)
+		return
+	}
+	// Set the content type to application/json
+	writer.Header().Set("Content-Type", "application/json")
+	// Use json.NewEncoder to write entries as a JSON array to writer
+	err = json.NewEncoder(writer).Encode(entries)
+	if err != nil {
+		log.Println("Error encoding entries to JSON:", err)
+		http.Error(writer, "Error encoding entries to JSON", http.StatusInternalServerError)
+	}
+}
+
 func deleteHandler(w http.ResponseWriter, r *http.Request) {
-	// Implement file deleting logic here
+
+	// Parse the form data to get the file name
+	err := r.ParseForm()
+	if err != nil {
+		log.Println("Error parsing the form:", err)
+		http.Error(w, "Error parsing the form", http.StatusInternalServerError)
+		return
+	}
+
+	filename := r.FormValue("filename")
+
+	// Use the findByName function to check if a file with the given name exists
+	record, err := findByName(filename)
+	if err != nil {
+		log.Println("Error executing findByName:", err)
+		http.Error(w, "Error in finding record by name", http.StatusInternalServerError)
+		return
+	}
+
+	// If the file does not exist, respond with an appropriate message
+	if record == nil {
+		http.Error(w, "record does not exist", http.StatusNotFound)
+		return
+	}
+
+	// Delete the record from the CSV file
+	err = deleteFromCSV(filename)
+	if err != nil {
+		log.Println("Error deleting record from CSV:", err)
+		http.Error(w, "Error deleting record from CSV", http.StatusInternalServerError)
+		return
+	}
+
+	// Delete the file from the file system
+	err = os.Remove(getFilePath(filename))
+	if err != nil {
+		log.Println("Error deleting the file:", err)
+		http.Error(w, "Error deleting the file", http.StatusInternalServerError)
+		return
+	}
+
+	// Respond with a success message
+	_, err = w.Write([]byte("File deleted successfully"))
+	if err != nil {
+		log.Println("Error writing response:", err)
+	}
 }

@@ -218,6 +218,30 @@ func findByName(name string) (*FileDetails, error) {
 	return nil, nil
 }
 
+func findByHashOrName(hash string, name string) (*FileDetails, error) {
+	// First, try to find by hash
+	record, err := findByHash(hash)
+	if err != nil {
+		log.Println("Error finding the hash:", err)
+		return nil, err
+	}
+
+	// If a record is found by hash, return it
+	if record != nil {
+		return record, nil
+	}
+
+	// If no record is found by hash, try to find by name
+	record, err = findByName(name)
+	if err != nil {
+		log.Println("Error finding the name:", err)
+		return nil, err
+	}
+
+	// Return the record found by name (could be nil if no record is found)
+	return record, nil
+}
+
 func cleanCSV() error {
 	file, err := os.Create(CsvFileLocation)
 	if err != nil {

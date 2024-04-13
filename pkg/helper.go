@@ -71,17 +71,18 @@ func getFilePath(filename string) string {
 
 func ManageFileUpdate(duplicate bool, newFileName string, previousFileDetails FileDetails) error {
 
+	newFileDetails := FileDetails{
+		Filename: newFileName,
+		FileSize: previousFileDetails.FileSize,
+		FileHash: previousFileDetails.FileHash,
+	}
+
 	// if duplicate is true, then duplicate an existing file with the newFileName
 	if duplicate {
+		log.Println("Duplicating the file")
 		err := DuplicateFile(previousFileDetails.Filename, newFileName)
 		if err != nil {
 			return err
-		}
-
-		newFileDetails := FileDetails{
-			Filename: newFileName,
-			FileSize: previousFileDetails.FileSize,
-			FileHash: previousFileDetails.FileHash,
 		}
 
 		err = storeInCSV(newFileDetails)
@@ -97,7 +98,12 @@ func ManageFileUpdate(duplicate bool, newFileName string, previousFileDetails Fi
 	if err != nil {
 		return err
 	}
-
+	// todo update csv record
+	err = updateInCSV(previousFileDetails.Filename, newFileDetails)
+	if err != nil {
+		log.Println("Error updating the record in the CSV:", err)
+		return err
+	}
 	return nil
 }
 
@@ -155,10 +161,14 @@ func modifyRecordAndFile(oldRecord FileDetails, newRecord FileDetails) error {
 		log.Println("Error storing the record in the CSV:", err)
 		return err
 	}
-	err = deleteFile(oldRecord.Filename)
-	if err != nil {
-		log.Println("Error deleting the file:", err)
-		return err
+	// Check if the old file name is different from the new file name
+	if oldRecord.Filename != newRecord.Filename {
+		// If the file names are different, delete the old file
+		err = deleteFile(oldRecord.Filename)
+		if err != nil {
+			log.Println("Error deleting the file:", err)
+			return err
+		}
 	}
 	return nil
 }
