@@ -286,21 +286,21 @@ func existenceCheckHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func listHandler(writer http.ResponseWriter, r *http.Request) {
+func listHandler(w http.ResponseWriter, r *http.Request) {
 
 	entries, err := getAllEntries()
 	if err != nil {
 		log.Println("Error getting all entries:", err)
-		http.Error(writer, "Error getting all entries", http.StatusInternalServerError)
+		http.Error(w, "Error getting all entries", http.StatusInternalServerError)
 		return
 	}
 	// Set the content type to application/json
-	writer.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json")
 	// Use json.NewEncoder to write entries as a JSON array to writer
-	err = json.NewEncoder(writer).Encode(entries)
+	err = json.NewEncoder(w).Encode(entries)
 	if err != nil {
 		log.Println("Error encoding entries to JSON:", err)
-		http.Error(writer, "Error encoding entries to JSON", http.StatusInternalServerError)
+		http.Error(w, "Error encoding entries to JSON", http.StatusInternalServerError)
 	}
 }
 
