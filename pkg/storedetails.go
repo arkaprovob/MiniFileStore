@@ -25,9 +25,10 @@ var TempCsvFileLocation string = func() string {
 }()
 
 type FileDetails struct {
-	Filename string
-	FileSize int64
-	FileHash string
+	Filename  string
+	FileSize  int64
+	FileHash  string
+	WordCount int
 }
 
 func storeInCSV(details FileDetails) error {
@@ -41,7 +42,8 @@ func storeInCSV(details FileDetails) error {
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 
-	record := []string{details.Filename, strconv.FormatInt(details.FileSize, 10), details.FileHash}
+	record := []string{details.Filename, strconv.FormatInt(details.FileSize, 10),
+		details.FileHash, strconv.Itoa(details.WordCount)}
 	err = writer.Write(record)
 	if err != nil {
 		log.Println("Error writing record to the file:", err)
@@ -130,11 +132,17 @@ func getAllEntries() ([]FileDetails, error) {
 			log.Println("Error parsing the file size:", err)
 			return nil, err
 		}
+		wc, err := strconv.Atoi(record[3])
+		if err != nil {
+			log.Println("Error parsing the word count:", err)
+			return nil, err
+		}
 
 		entries = append(entries, FileDetails{
-			Filename: record[0],
-			FileSize: fileSize,
-			FileHash: record[2],
+			Filename:  record[0],
+			FileSize:  fileSize,
+			FileHash:  record[2],
+			WordCount: wc,
 		})
 	}
 

@@ -122,8 +122,15 @@ func storeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	wordCount, err := countWordsInFile(fileName)
+	if err != nil {
+		log.Println("Error counting words in the file:", err)
+		http.Error(w, "Error counting words in the file", http.StatusInternalServerError)
+		return
+	}
+
 	// store the file details in the csv file
-	fileDetails := FileDetails{Filename: fileName, FileSize: r.ContentLength, FileHash: md5Hash}
+	fileDetails := FileDetails{Filename: fileName, FileSize: r.ContentLength, FileHash: md5Hash, WordCount: wordCount}
 	err = storeInCSV(fileDetails)
 	if err != nil {
 		log.Println("Error storing file details:", err)
@@ -231,7 +238,14 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		// Compute the MD5 hash of the new file
 		md5Hash, err := ComputeMD5Hash(newFilePath)
-		newRecord := FileDetails{Filename: newFileName, FileSize: r.ContentLength, FileHash: md5Hash}
+		wordCount, err := countWordsInFile(newFileName)
+		if err != nil {
+			log.Println("Error counting words in the file:", err)
+			http.Error(w, "Error counting words in the file", http.StatusInternalServerError)
+			return
+		}
+		newRecord := FileDetails{Filename: newFileName, FileSize: r.ContentLength,
+			FileHash: md5Hash, WordCount: wordCount}
 		// Update the old record with the new record and delete the old file
 		err = modifyRecordAndFile(*record, newRecord)
 		if err != nil {

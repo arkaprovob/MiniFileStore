@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"bufio"
 	"crypto/md5"
 	"fmt"
 	"io"
@@ -9,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // CloseFile closes the given file and logs an error if one occurs.
@@ -86,9 +88,10 @@ func RecordStorePath(filename string) (string, error) {
 func ManageFileUpdate(duplicate bool, newFileName string, previousFileDetails FileDetails) error {
 
 	newFileDetails := FileDetails{
-		Filename: newFileName,
-		FileSize: previousFileDetails.FileSize,
-		FileHash: previousFileDetails.FileHash,
+		Filename:  newFileName,
+		FileSize:  previousFileDetails.FileSize,
+		FileHash:  previousFileDetails.FileHash,
+		WordCount: previousFileDetails.WordCount,
 	}
 
 	// if duplicate is true, then duplicate an existing file with the newFileName
@@ -112,7 +115,6 @@ func ManageFileUpdate(duplicate bool, newFileName string, previousFileDetails Fi
 	if err != nil {
 		return err
 	}
-	// todo update csv record
 	err = updateInCSV(previousFileDetails.Filename, newFileDetails)
 	if err != nil {
 		log.Println("Error updating the record in the CSV:", err)
@@ -222,4 +224,34 @@ func deleteFile(filename string) error {
 		return err
 	}
 	return nil
+}
+
+func countWordsInFile(fileLocation string) (int, error) {
+
+	filePath, err := getFileStorePath(fileLocation)
+	if err != nil {
+		log.Println("Error finding the path of the file:", err)
+		return 0, err
+	}
+	file, err := os.Open(filePath)
+	if err != nil {
+		return 0, err
+	}
+	defer CloseFile(file)
+
+	scanner := bufio.NewScanner(file)
+	scanner.Split(bufio.ScanLines)
+
+	wordCount := 0
+	for scanner.Scan() {
+		line := scanner.Text()
+		words := strings.Fields(line)
+		wordCount += len(words)
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	return wordCount, nil
 }
