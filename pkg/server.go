@@ -71,7 +71,7 @@ func storeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer CloseMultipartFile(file)
 
-	filePath, err := getFilePath(fileName)
+	filePath, err := getFileStorePath(fileName)
 	if err != nil {
 		log.Println("Error getting file path:", err)
 		http.Error(w, "Error getting file path from config", http.StatusInternalServerError)
@@ -97,7 +97,6 @@ func storeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Compute the MD5 hash of the uploaded file
-	// todo use filepath.Join function to generate the file-path
 	md5Hash, err := ComputeMD5Hash(filePath)
 	if err != nil {
 		log.Println("Error computing the MD5 hash:", err)
@@ -124,7 +123,6 @@ func storeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// store the file details in the csv file
-	// todo
 	fileDetails := FileDetails{Filename: fileName, FileSize: r.ContentLength, FileHash: md5Hash}
 	err = storeInCSV(fileDetails)
 	if err != nil {
@@ -208,7 +206,7 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		newFilePath, err := getFilePath(newFileName)
+		newFilePath, err := getFileStorePath(newFileName)
 		if err != nil {
 			log.Println("Error getting file path:", err)
 			http.Error(w, "Error getting file path from config", http.StatusInternalServerError)
@@ -355,7 +353,7 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filePath, err := getFilePath(filename)
+	filePath, err := getFileStorePath(filename)
 	if err != nil {
 		log.Println("Error finding the path of the file:", err)
 		http.Error(w, "Error finding the path of the file", http.StatusInternalServerError)

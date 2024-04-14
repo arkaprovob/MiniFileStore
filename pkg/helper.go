@@ -65,13 +65,22 @@ func ComputeMD5Hash(filePath string) (string, error) {
 }
 
 // todo get teh filepath from the environment variable `os.Getenv("FILES_DIR")`
-func getFilePath(filename string) (string, error) {
+func getFileStorePath(filename string) (string, error) {
 	config, err := GetConfig()
 	if err != nil {
 		log.Println("Error getting the config:", err)
 		return "", err
 	}
 	return filepath.Join(config.FileStore, filename), nil
+}
+
+func RecordStorePath(filename string) (string, error) {
+	config, err := GetConfig()
+	if err != nil {
+		log.Println("Error getting the config:", err)
+		return "", err
+	}
+	return filepath.Join(config.RecordStore, filename), nil
 }
 
 func ManageFileUpdate(duplicate bool, newFileName string, previousFileDetails FileDetails) error {
@@ -114,11 +123,11 @@ func ManageFileUpdate(duplicate bool, newFileName string, previousFileDetails Fi
 
 func UpdateFileName(prevFilename string, newName string) error {
 
-	previousFile, err := getFilePath(prevFilename)
+	previousFile, err := getFileStorePath(prevFilename)
 	if err != nil {
 		return err
 	}
-	newFile, err := getFilePath(newName)
+	newFile, err := getFileStorePath(newName)
 	if err != nil {
 		return err
 	}
@@ -133,12 +142,12 @@ func UpdateFileName(prevFilename string, newName string) error {
 
 func DuplicateFile(src string, dst string) error {
 	// Open the source file for reading
-	sourceFile, err := getFilePath(src)
+	sourceFile, err := getFileStorePath(src)
 	if err != nil {
 		log.Println("Error finding the path of the source file:", err)
 		return err
 	}
-	destFile, err := getFilePath(dst)
+	destFile, err := getFileStorePath(dst)
 	if err != nil {
 		log.Println("Error finding the path of the destination file:", err)
 		return err
@@ -201,7 +210,7 @@ func modifyRecordAndFile(oldRecord FileDetails, newRecord FileDetails) error {
 
 func deleteFile(filename string) error {
 
-	filePath, err := getFilePath(filename)
+	filePath, err := getFileStorePath(filename)
 	if err != nil {
 		log.Println("Error finding the path of the file:", err)
 		return err

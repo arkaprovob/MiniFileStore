@@ -8,8 +8,21 @@ import (
 	"strconv"
 )
 
-var CsvFileLocation = "fileDetails.csv"
-var TempCsvFileLocation = "fileDetailsTemp.csv"
+var CsvFileLocation string = func() string {
+	path, err := RecordStorePath("fileDetails.csv")
+	if err != nil {
+		log.Fatal(err)
+	}
+	return path
+}()
+
+var TempCsvFileLocation string = func() string {
+	path, err := RecordStorePath("fileDetailsTemp.csv")
+	if err != nil {
+		log.Fatal(err)
+	}
+	return path
+}()
 
 type FileDetails struct {
 	Filename string
@@ -20,7 +33,7 @@ type FileDetails struct {
 func storeInCSV(details FileDetails) error {
 	file, err := os.OpenFile(CsvFileLocation, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		log.Println("Error opening the file:", err)
+		log.Println("Error opening the file in storeInCSV method:", err)
 		return err
 	}
 	defer CloseFile(file)
@@ -92,7 +105,7 @@ func deleteFromCSV(fileName string) error {
 }
 
 func getAllEntries() ([]FileDetails, error) {
-	file, err := os.Open(CsvFileLocation)
+	file, err := os.OpenFile(CsvFileLocation, os.O_CREATE|os.O_RDONLY, 0644)
 	if err != nil {
 		log.Println("Error opening the file:", err)
 		return nil, err
@@ -128,7 +141,7 @@ func getAllEntries() ([]FileDetails, error) {
 	return entries, nil
 }
 func updateInCSV(fileName string, newDetails FileDetails) error {
-	file, err := os.Open(CsvFileLocation)
+	file, err := os.OpenFile(CsvFileLocation, os.O_CREATE|os.O_RDONLY, 0644)
 	if err != nil {
 		log.Println("Error opening the file:", err)
 		return err
