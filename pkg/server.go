@@ -29,7 +29,7 @@ func Serve(port string) {
 }
 
 func rootHandler(w http.ResponseWriter, r *http.Request) {
-	data, err := os.ReadFile("resources/readme.md")
+	data, err := os.ReadFile("api-specs.yaml")
 	if err != nil {
 		http.Error(w, "File reading error", http.StatusInternalServerError)
 		return
