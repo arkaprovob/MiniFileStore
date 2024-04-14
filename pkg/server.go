@@ -414,9 +414,16 @@ func wordFrequencyHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	directory, err := getFileStoreDir()
+	if err != nil {
+		log.Println("Error getting file-store directory:", err)
+		http.Error(w, "Error getting file store directory", http.StatusInternalServerError)
+		return
+
+	}
+
 	// Call the CountWordsFrequencyParallel function with the directory set as "test-resources"
-	// todo get teh directory from the environment variable `os.Getenv("FILES_DIR")`
-	result := CountWordsFrequencyParallel("test-resources", noOfWords, mostFrequent)
+	result := CountWordsFrequencyParallel(directory, noOfWords, mostFrequent)
 
 	// Convert the result to JSON and write it to the response
 	resultJson, err := json.Marshal(result)

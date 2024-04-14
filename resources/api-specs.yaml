@@ -85,3 +85,29 @@ paths:
       responses:
         '200':
           description: File deleted successfully
+  /api/v1/frequency:
+    post:
+      summary: Word frequency handler
+      parameters:
+        - name: noOfWords
+          in: query
+          schema:
+            type: integer
+            format: int32
+        - name: mostFrequent
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: integer
+        '400':
+          description: Invalid input
+        '500':
+          description: Internal server error

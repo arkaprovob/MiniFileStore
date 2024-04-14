@@ -76,6 +76,15 @@ func getFileStorePath(filename string) (string, error) {
 	return filepath.Join(config.FileStore, filename), nil
 }
 
+func getFileStoreDir() (string, error) {
+	config, err := GetConfig()
+	if err != nil {
+		log.Println("Error getting the config:", err)
+		return "", err
+	}
+	return config.FileStore, nil
+}
+
 func RecordStorePath(filename string) (string, error) {
 	config, err := GetConfig()
 	if err != nil {
