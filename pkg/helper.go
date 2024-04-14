@@ -65,8 +65,13 @@ func ComputeMD5Hash(filePath string) (string, error) {
 }
 
 // todo get teh filepath from the environment variable `os.Getenv("FILES_DIR")`
-func getFilePath(filename string) string {
-	return filepath.Join("files", filename)
+func getFilePath(filename string) (string, error) {
+	config, err := GetConfig()
+	if err != nil {
+		log.Println("Error getting the config:", err)
+		return "", err
+	}
+	return filepath.Join(config.FileStore, filename), nil
 }
 
 func ManageFileUpdate(duplicate bool, newFileName string, previousFileDetails FileDetails) error {
@@ -108,8 +113,18 @@ func ManageFileUpdate(duplicate bool, newFileName string, previousFileDetails Fi
 }
 
 func UpdateFileName(prevFilename string, newName string) error {
+
+	previousFile, err := getFilePath(prevFilename)
+	if err != nil {
+		return err
+	}
+	newFile, err := getFilePath(newName)
+	if err != nil {
+		return err
+	}
+
 	// Rename the file to the new name
-	err := os.Rename(getFilePath(prevFilename), getFilePath(newName))
+	err = os.Rename(previousFile, newFile)
 	if err != nil {
 		return err
 	}
@@ -118,7 +133,18 @@ func UpdateFileName(prevFilename string, newName string) error {
 
 func DuplicateFile(src string, dst string) error {
 	// Open the source file for reading
-	srcFile, err := os.Open(getFilePath(src))
+	sourceFile, err := getFilePath(src)
+	if err != nil {
+		log.Println("Error finding the path of the source file:", err)
+		return err
+	}
+	destFile, err := getFilePath(dst)
+	if err != nil {
+		log.Println("Error finding the path of the destination file:", err)
+		return err
+	}
+
+	srcFile, err := os.Open(sourceFile)
 	if err != nil {
 		log.Println("Error opening the source file:", err)
 		return err
@@ -126,7 +152,7 @@ func DuplicateFile(src string, dst string) error {
 	defer CloseFile(srcFile)
 
 	// Create the destination file
-	dstFile, err := os.Create(getFilePath(dst))
+	dstFile, err := os.Create(destFile)
 	if err != nil {
 		log.Println("Error creating the destination file:", err)
 		return err
@@ -174,7 +200,14 @@ func modifyRecordAndFile(oldRecord FileDetails, newRecord FileDetails) error {
 }
 
 func deleteFile(filename string) error {
-	err := os.Remove(getFilePath(filename))
+
+	filePath, err := getFilePath(filename)
+	if err != nil {
+		log.Println("Error finding the path of the file:", err)
+		return err
+	}
+
+	err = os.Remove(filePath)
 	if err != nil {
 		log.Println("Error deleting the file:", err)
 		return err

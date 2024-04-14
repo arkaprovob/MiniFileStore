@@ -71,8 +71,15 @@ func storeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer CloseMultipartFile(file)
 
+	filePath, err := getFilePath(fileName)
+	if err != nil {
+		log.Println("Error getting file path:", err)
+		http.Error(w, "Error getting file path from config", http.StatusInternalServerError)
+		return
+	}
+
 	// Create a new file in the files directory
-	dst, err := os.Create(getFilePath(fileName)) // create a new file with the same name
+	dst, err := os.Create(filePath) // create a new file with the same name
 	if err != nil {
 		log.Println("Error creating the file:", err)
 		http.Error(w, "Error creating the file", http.StatusInternalServerError)
@@ -81,6 +88,7 @@ func storeHandler(w http.ResponseWriter, r *http.Request) {
 	defer CloseFile(dst)
 
 	// Write the contents of the uploaded file to the new file
+	// todo mitigate <cc1> if the same file already exists in the directory or same hash exists then copying file would be an issue
 	_, err = io.Copy(dst, file)
 	if err != nil {
 		log.Println("Error copying the file:", err)
@@ -90,7 +98,7 @@ func storeHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Compute the MD5 hash of the uploaded file
 	// todo use filepath.Join function to generate the file-path
-	md5Hash, err := ComputeMD5Hash(getFilePath(fileName))
+	md5Hash, err := ComputeMD5Hash(filePath)
 	if err != nil {
 		log.Println("Error computing the MD5 hash:", err)
 		http.Error(w, "Error computing the MD5 hash", http.StatusInternalServerError)
@@ -98,6 +106,7 @@ func storeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//check if the file already exists
+	// todo mitigate breaks the logic as mentioned in <cc1>; mandate the pre-flight checking find by name or hash
 	entry, err := findByHash(md5Hash)
 	if err != nil {
 		log.Println("Error finding file hash:", err)
@@ -199,8 +208,15 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		newFilePath, err := getFilePath(newFileName)
+		if err != nil {
+			log.Println("Error getting file path:", err)
+			http.Error(w, "Error getting file path from config", http.StatusInternalServerError)
+			return
+		}
+
 		// Create a new file in the files directory
-		dst, err := os.Create(getFilePath(newFileName))
+		dst, err := os.Create(newFilePath)
 		if err != nil {
 			log.Println("Error creating the file:", err)
 			http.Error(w, "Error creating the file", http.StatusInternalServerError)
@@ -216,7 +232,7 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		// Compute the MD5 hash of the new file
-		md5Hash, err := ComputeMD5Hash(getFilePath(newFileName))
+		md5Hash, err := ComputeMD5Hash(newFilePath)
 		newRecord := FileDetails{Filename: newFileName, FileSize: r.ContentLength, FileHash: md5Hash}
 		// Update the old record with the new record and delete the old file
 		err = modifyRecordAndFile(*record, newRecord)
@@ -339,8 +355,16 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	filePath, err := getFilePath(filename)
+	if err != nil {
+		log.Println("Error finding the path of the file:", err)
+		http.Error(w, "Error finding the path of the file", http.StatusInternalServerError)
+		return
+
+	}
+
 	// Delete the file from the file system
-	err = os.Remove(getFilePath(filename))
+	err = os.Remove(filePath)
 	if err != nil {
 		log.Println("Error deleting the file:", err)
 		http.Error(w, "Error deleting the file", http.StatusInternalServerError)
