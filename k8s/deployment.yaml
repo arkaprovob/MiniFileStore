@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: ministore
-          image: ministore:latest
+          image: quay.io/arbhatta/minifs:latest
           ports:
             - containerPort: 8080
           volumeMounts:
