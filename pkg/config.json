@@ -1,4 +1,4 @@
 {
-  "file_store": "/home/arko/minifilestore/files",
-  "record_store": "/home/arko/minifilestore/record"
+  "file_store": "test-resources/file-store",
+  "record_store": "test-resources/record-store"
 }

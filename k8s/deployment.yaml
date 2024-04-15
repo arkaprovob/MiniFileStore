@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ministore-deployment
+  labels:
+    app: ministore
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ministore
+  template:
+    metadata:
+      labels:
+        app: ministore
+    spec:
+      containers:
+        - name: ministore
+          image: ministore:latest
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: file-store-volume
+              mountPath: /app/store/files
+            - name: record-store-volume
+              mountPath: /app/store/record
+      volumes:
+        - name: file-store-volume
+          persistentVolumeClaim:
+            claimName: file-store-pvc
+        - name: record-store-volume
+          persistentVolumeClaim:
+            claimName: record-store-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: file-store-pvc
+  annotations:
+    kubernetes.io/reclaimPolicy: Delete
+    trident.netapp.io/reclaimPolicy: Delete
+  labels:
+    paas.redhat.com/appcode: SPAS-001
+    app.kubernetes.io/managed-by: arko
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: "${STORAGE_CLASS}"
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: record-store-pvc
+  annotations:
+    kubernetes.io/reclaimPolicy: Delete
+    trident.netapp.io/reclaimPolicy: Delete
+  labels:
+    paas.redhat.com/appcode: SPAS-001
+    app.kubernetes.io/managed-by: arko
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: "${STORAGE_CLASS}"
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ministore-service
+spec:
+  selector:
+    app: ministore
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+      name: 8080-tcp
+
+---
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: route-${WEBSITE}-${ENV}-${APP_INSTANCE_PREFIX}
+  labels:
+    shard: ${SHARD}
+    paas.redhat.com/appcode: ${CMDB_CODE}
+  annotations:
+    haproxy.router.openshift.io/timeout: 5m
+spec:
+  host: route-${WEBSITE}-${ENV}-${APP_INSTANCE_PREFIX}.${ROUTER_DOMAIN}
+  to:
+    kind: Service
+    name: ministore-service
+  port:
+    targetPort: 8080-tcp
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None

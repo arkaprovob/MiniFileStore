@@ -4,22 +4,34 @@ import (
 	"testing"
 )
 
+func setup(t *testing.T) func() {
+	TestStoreMultipleEntriesInCSV(t)
+	return func() {
+		TestCleanCSV(t)
+		teardown()
+	}
+}
+
 func TestStoreMultipleEntriesInCSV(t *testing.T) {
+
 	entries := []FileDetails{
 		{
-			Filename: "testfile1.txt",
-			FileSize: 1234,
-			FileHash: "abcd1234",
+			Filename:  "testfile1.txt",
+			FileSize:  1234,
+			FileHash:  "abcd1234",
+			WordCount: 10,
 		},
 		{
-			Filename: "testfile.txt",
-			FileSize: 4567,
-			FileHash: "aeyd4567",
+			Filename:  "testfile.txt",
+			FileSize:  4567,
+			FileHash:  "aeyd4567",
+			WordCount: 11,
 		},
 		{
-			Filename: "testfile2.txt",
-			FileSize: 5678,
-			FileHash: "efgh5678",
+			Filename:  "testfile2.txt",
+			FileSize:  5678,
+			FileHash:  "efgh5678",
+			WordCount: 12,
 		},
 		// Add more entries as needed
 	}
@@ -33,6 +45,10 @@ func TestStoreMultipleEntriesInCSV(t *testing.T) {
 }
 
 func TestDeleteFromCSV(t *testing.T) {
+
+	teardown := fileStoreSetup(t)
+	defer teardown()
+
 	fileName := "testfile.txt"
 
 	err := deleteFromCSV(fileName)
@@ -42,6 +58,8 @@ func TestDeleteFromCSV(t *testing.T) {
 }
 
 func TestGetAllEntries(t *testing.T) {
+	teardown := setup(t)
+	defer teardown()
 	_, err := getAllEntries()
 	if err != nil {
 		t.Errorf("getAllEntries failed with error: %v", err)
@@ -63,6 +81,10 @@ func TestUpdateInCSV(t *testing.T) {
 }
 
 func TestFindByHash(t *testing.T) {
+
+	teardown := setup(t)
+	defer teardown()
+
 	fileHash := "abcd1234"
 	entry, err := findByHash(fileHash)
 	if err != nil {
@@ -74,6 +96,10 @@ func TestFindByHash(t *testing.T) {
 }
 
 func TestFindByName(t *testing.T) {
+
+	teardown := setup(t)
+	defer teardown()
+
 	fileName := "testfile2.txt"
 	entry, err := findByName(fileName)
 	if err != nil {
@@ -85,6 +111,10 @@ func TestFindByName(t *testing.T) {
 }
 
 func TestFindByHashOrNameWithCorrectHash(t *testing.T) {
+
+	teardown := setup(t)
+	defer teardown()
+
 	fileName := "invalid.txt"
 	fileHash := "efgh5678"
 	entry, err := findByHashOrName(fileHash, fileName)
@@ -97,6 +127,10 @@ func TestFindByHashOrNameWithCorrectHash(t *testing.T) {
 }
 
 func TestFindByHashOrNameWithCorrectName(t *testing.T) {
+
+	teardown := setup(t)
+	defer teardown()
+
 	fileName := "testfile2.txt"
 	fileHash := "xxxx"
 	entry, err := findByHashOrName(fileHash, fileName)
@@ -109,6 +143,7 @@ func TestFindByHashOrNameWithCorrectName(t *testing.T) {
 }
 
 func TestFindByHashOrNameWithInvalidDetails(t *testing.T) {
+
 	fileName := "invalid.txt"
 	fileHash := "xxxx"
 	entry, err := findByHashOrName(fileHash, fileName)

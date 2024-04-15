@@ -19,8 +19,70 @@ var TestFileName = "testfile.txt"
 var TestFileLocation = filepath.Join("test-resources", TestFileName)
 var Test2FileLocation = filepath.Join("test-resources", "test2file.txt")
 
+func removeAllFilesInDirectory(dir string) error {
+	d, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	defer func(d *os.File) {
+		err := d.Close()
+		if err != nil {
+			log.Fatalf("Failed to close directory: %s", err)
+		}
+	}(d)
+
+	names, err := d.Readdirnames(-1)
+	if err != nil {
+		return err
+	}
+
+	for _, name := range names {
+		if name == ".ignore" {
+			continue
+		}
+		err = os.RemoveAll(filepath.Join(dir, name))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func teardown() {
+	err := removeAllFilesInDirectory("test-resources/file-store")
+	if err != nil {
+		log.Fatalf("Failed to remove all files in directory: %s", err)
+	}
+
+	err = removeAllFilesInDirectory("test-resources/record-store")
+	if err != nil {
+		log.Fatalf("Failed to remove all files in directory: %s", err)
+	}
+}
+
+func fileStoreSetup(t *testing.T) func() {
+	TestCleanCSV(t)
+	TestStoreHandler(t)
+	// return the teardown function
+	return func() {
+		teardown()
+	}
+}
+
+func csvSetup(t *testing.T) func() {
+	TestCleanCSV(t)
+	TestStoreMultipleEntriesInCSV(t)
+	// return the teardown function
+	return func() {
+		teardown()
+	}
+}
+
+// todo need to check if in good idea to refer to the a test function from another test file
+
 func TestStoreHandler(t *testing.T) {
-	// inst to run <execute `TestCleanCSV` from `storedetails_test.go` first>
+	TestCleanCSV(t)
 
 	// Create a new multipart form
 	body := &bytes.Buffer{}
@@ -83,7 +145,6 @@ func TestStoreHandler(t *testing.T) {
 }
 
 func TestUpdateHandlerCaseNewFile(t *testing.T) {
-	// inst to run <execute `TestStoreHandler` first>
 
 	// Create a new multipart form
 	body := &bytes.Buffer{}
@@ -159,7 +220,8 @@ func TestUpdateHandlerCaseNewFile(t *testing.T) {
 	}
 }
 func TestUpdateHandlerCaseUpdateName(t *testing.T) {
-	// inst to run <execute `TestStoreHandler` first>
+	teardown := fileStoreSetup(t)
+	defer teardown()
 
 	// Create a new multipart form
 	body := &bytes.Buffer{}
@@ -214,7 +276,8 @@ func TestUpdateHandlerCaseUpdateName(t *testing.T) {
 }
 
 func TestUpdateHandlerCaseDuplicate(t *testing.T) {
-	// inst to run <execute `TestStoreHandler` first>
+	teardown := fileStoreSetup(t)
+	defer teardown()
 
 	// Create a new multipart form
 	body := &bytes.Buffer{}
@@ -269,7 +332,8 @@ func TestUpdateHandlerCaseDuplicate(t *testing.T) {
 }
 
 func TestUpdateHandlerCaseUpdateFileContent(t *testing.T) {
-	// inst to run <execute `TestStoreHandler` first>
+	teardown := fileStoreSetup(t)
+	defer teardown()
 
 	// Create a new multipart form
 	body := &bytes.Buffer{}
@@ -346,7 +410,8 @@ func TestUpdateHandlerCaseUpdateFileContent(t *testing.T) {
 }
 
 func TestExistenceCheckHandler(t *testing.T) {
-	// inst to run <execute `TestStoreMultipleEntriesInCSV` from `storedetails_test.go` first and then>
+	teardown := csvSetup(t)
+	defer teardown()
 
 	// Create a new HTTP request
 	req, err := http.NewRequest("GET", "/api/v1/exists", nil)
@@ -373,7 +438,8 @@ func TestExistenceCheckHandler(t *testing.T) {
 	}
 
 	// Check the response body is what we expect
-	expected := `{"Filename":"testfile1.txt","FileSize":1234,"FileHash":"abcd1234"}`
+	// todo use FileDetails object instead of string comparison
+	expected := `{"Filename":"testfile1.txt","FileSize":1234,"FileHash":"abcd1234","WordCount":10}`
 	if rr.Body.String() != expected {
 		t.Errorf("handler returned unexpected body: got %v want %v",
 			rr.Body.String(), expected)
@@ -414,7 +480,8 @@ func TestNonExistentRecordInExistenceCheckHandler(t *testing.T) {
 }
 
 func TestListHandler(t *testing.T) {
-	// inst to run <execute `TestCleanCSV` from `storedetails_test.go` first>
+	teardown := csvSetup(t)
+	defer teardown()
 
 	// Create a new HTTP request
 	req, err := http.NewRequest("GET", "/api/v1/list", nil)
@@ -448,7 +515,8 @@ func TestListHandler(t *testing.T) {
 }
 
 func TestDeleteHandler(t *testing.T) {
-	// inst to run <execute `TestStoreHandler` first>
+	teardown := fileStoreSetup(t)
+	defer teardown()
 
 	// Create form data
 	data := url.Values{}
@@ -482,6 +550,9 @@ func TestDeleteHandler(t *testing.T) {
 	}
 }
 func TestWordFrequencyHandler(t *testing.T) {
+	teardown := fileStoreSetup(t)
+	defer teardown()
+
 	// Create a new HTTP request with the form data
 	form := url.Values{}
 	form.Add("noOfWords", "10")
