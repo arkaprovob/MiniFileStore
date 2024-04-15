@@ -20,6 +20,15 @@ podman run -d -p 8080:8080 \
 
 Replace `/path/to/local/store` and `/path/to/local/record` with the actual paths to the folders on your machine. These folders will be mounted within the Docker container.
 
+A public container image is available at `quay.io/arbhatta/minifs:latest`. To use this image, execute the following command:
+```bash
+podman run -d -p 8080:8080 \
+  -v </path/to/local/store>:/app/store/files \
+  -v </path/to/local/record>:/app/store/record \
+  quay.io/arbhatta/minifs:latest
+
+```
+This command will download the `quay.io/arbhatta/minifs:latest` image from Quay and start a container from it. The `-v` options are for mounting your local directories into the container. Replace `/path/to/local/store` and `/path/to/local/record` with the actual paths on your machine.
 ## API Routes
 
 MiniStore exposes the following API routes:
