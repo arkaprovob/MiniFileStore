@@ -3,7 +3,7 @@
 MiniStore is a small file store utility application designed to store files along with their related meta-information. It provides users with a command-line interface (CLI) to interact with the application via HTTP requests.
 ## Usage
 
-1. **Build the Docker Image Locally:**
+1. **Build the Image Locally:**
     - Clone the repository or unzip the project.
     - Navigate to the project's root directory and run the following command:
       ```bash
