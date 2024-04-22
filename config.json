@@ -1,4 +1,4 @@
 {
-  "file_store": "/app/store/files",
-  "record_store": "/app/store/record"
+  "file_store": "/home/appuser/store/files",
+  "record_store": "/home/appuser/store/record"
 }

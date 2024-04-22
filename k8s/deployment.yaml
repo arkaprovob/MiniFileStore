@@ -16,14 +16,17 @@ spec:
     spec:
       containers:
         - name: ministore
+          securityContext:
+            runAsNonRoot: false
+            runAsUser: 1025600001
           image: quay.io/arbhatta/minifs:latest
           ports:
             - containerPort: 8080
           volumeMounts:
             - name: file-store-volume
-              mountPath: /app/store/files
+              mountPath: /home/appuser/store/files
             - name: record-store-volume
-              mountPath: /app/store/record
+              mountPath: /home/appuser/store/record
       volumes:
         - name: file-store-volume
           persistentVolumeClaim:
@@ -31,6 +34,8 @@ spec:
         - name: record-store-volume
           persistentVolumeClaim:
             claimName: record-store-pvc
+      securityContext:
+        runAsUser: 1025600001
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -44,11 +49,11 @@ metadata:
     app.kubernetes.io/managed-by: arko
 spec:
   accessModes:
-    - ReadWriteMany
-  storageClassName: "${STORAGE_CLASS}"
+    - ReadWriteOnce
+  storageClassName: "gp2"
   resources:
     requests:
-      storage: 1Gi
+      storage: 200M
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -63,10 +68,10 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: "${STORAGE_CLASS}"
+  storageClassName: "gp2"
   resources:
     requests:
-      storage: 1Gi
+      storage: 200M
 ---
 apiVersion: v1
 kind: Service
@@ -85,14 +90,14 @@ spec:
 kind: Route
 apiVersion: route.openshift.io/v1
 metadata:
-  name: route-${WEBSITE}-${ENV}-${APP_INSTANCE_PREFIX}
+  name: route-minifs-stage
   labels:
-    shard: ${SHARD}
-    paas.redhat.com/appcode: ${CMDB_CODE}
+    shard: ext-waf
+    paas.redhat.com/appcode: CUST001
   annotations:
     haproxy.router.openshift.io/timeout: 5m
 spec:
-  host: route-${WEBSITE}-${ENV}-${APP_INSTANCE_PREFIX}.${ROUTER_DOMAIN}
+  host: route-minifs-stage.apps.sandbox-m2.ll9k.p1.openshiftapps.com
   to:
     kind: Service
     name: ministore-service

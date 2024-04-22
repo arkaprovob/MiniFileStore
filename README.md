@@ -3,32 +3,37 @@
 MiniStore is a small file store utility application designed to store files along with their related meta-information. It provides users with a command-line interface (CLI) to interact with the application via HTTP requests.
 ## Usage
 
-To build a Docker image of MiniStore, clone the repository or unzip the project, and then run the following command on the project's root.
+1. **Build the Docker Image Locally:**
+    - Clone the repository or unzip the project.
+    - Navigate to the project's root directory and run the following command:
+      ```bash
+      podman build -t ministore .
+      ```
 
-```bash
-podman build -t ministore .
-```
+2. **Running the Locally Built Container:**
+    - After building the image, execute the following command:
+      ```bash
+      podman run -d -p 8080:8080 -v </path/to/local/store/files>:/home/appuser/store/files:z -v </path/to/local/store/record>:/home/appuser/store/record:z ministore
+      ```
+    - Replace `</path/to/local/store/files>` and `</path/to/local/store/record>` with the actual paths to the folders on your machine. These folders will be mounted within the container.
 
-To run the Docker image, execute the following command:
+3. **Using the Pre-built Container:**
+    - A public container image is available at `quay.io/arbhatta/minifs:latest`.
+    - To use this image, execute the following command:
+      ```bash
+      podman run --name minifscont -d -p 8080:8080 -v </path/to/local/store/files>:/home/appuser/store/files:z -v </path/to/local/store/record>:/home/appuser/store/record:z quay.io/arbhatta/minifs:latest
+      ```
+    - Replace `</path/to/local/store/files>` and `</path/to/local/store/record>` with the actual paths on your machine.
 
-```bash
-podman run -d -p 8080:8080 \
-  -v /path/to/local/store:/app/store/files \
-  -v /path/to/local/record:/app/store/record \
-  ministore
-```
+4. **Dealing with Permission Denied Issues in the Container:**
+    - If you encounter permission denied issues in the container logs during any operation, it might be due to the container not being able to access the mounted volume.
+    - In such cases, stop the container and execute the following commands:
+      ```bash
+      podman unshare chown 1000:1000 </path/to/local/store/files>
+      podman unshare chown 1000:1000 </path/to/local/store/record>
+      ```
+    - This will change the ownership of the mounted volume to the user in the container. Then start the container again.
 
-Replace `/path/to/local/store` and `/path/to/local/record` with the actual paths to the folders on your machine. These folders will be mounted within the Docker container.
-
-A public container image is available at `quay.io/arbhatta/minifs:latest`. To use this image, execute the following command:
-```bash
-podman run -d -p 8080:8080 \
-  -v </path/to/local/store>:/app/store/files \
-  -v </path/to/local/record>:/app/store/record \
-  quay.io/arbhatta/minifs:latest
-
-```
-This command will download the `quay.io/arbhatta/minifs:latest` image from Quay and start a container from it. The `-v` options are for mounting your local directories into the container. Replace `/path/to/local/store` and `/path/to/local/record` with the actual paths on your machine.
 ## API Routes
 
 MiniStore exposes the following API routes:
